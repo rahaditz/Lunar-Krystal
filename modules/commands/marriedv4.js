@@ -1,8 +1,8 @@
 module.exports.config = {
-  name: "marriedv2",
+  name: "marriedv4",
   version: "3.1.1",
   hasPermssion: 0,
-  credits: "𝐂𝐘𝐁𝐄𝐑 ☢️_𖣘 -𝐁𝐎𝐓 ⚠️ 𝑻𝑬𝑨𝑴_ ☢️",
+  credits: "𝐃𝐚𝐫𝐤 𝐑𝐮𝐥𝐞𝐱 𝐊𝐢𝐧𝐠 𝐀𝐧𝐮𝐩",
   description: "married",
   commandCategory: "img",
   usages: "[@mention]",
