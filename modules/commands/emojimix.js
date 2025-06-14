@@ -1,55 +1,34 @@
-const axios = require('axios');
-const fs = require('fs');
-
+const APIURL = global.config.ApiUrl;
 module.exports.config = {
-	name: "emojimix",
-	version: "1.0.0", 
-	hasPermssion: 0,
-	credits: "Goatbot Project - Converted by Eien Mojiki", 
-	description: "Mix emoji sử dụng Emoji Kitchen",
-	commandCategory: "Tiện ích",
-	usages: "emojimix <emoji1> <emoji2>",
-	cooldowns: 5,
+    premium: false,  
+    prefix: true,
+    name: "emojimix",
+    version: "1.0.1",
+    permission: 0,
+    credits: "Deku",
+    description: "Mix emoji",
+    category: "image",
+    usages: "emoji1 | emoji2",
+    cooldowns: 0,
+    dependencies: {
+        "fs-extra": "",
+        "request": ""
+    }
 };
+module.exports.run = async ({ api, event,args }) => {  {
+    const fs = require("fs-extra");
+    const request = require("request");
+	 const { threadID, messageID, senderID, body } = event; 
+try {
+const content = args.join(" ").split("|").map(item => item = item.trim());
+let emoji1 = content[0]
+let emoji2 = content [1]
+if (!args[0])
+    return api.sendMessage("Wrong format!\nUse "+global.config.PREFIX+this.config.name+" "+this.config.usages, event.threadID, event.messageID);
 
-module.exports.run = async function({ api, event, args }) {
-  const readStream = [];
-  const emoji1 = args[0];
-  const emoji2 = args[1];
-  if (!emoji1 || !emoji2) {
-    return api.sendMessage('⌧ · Vui lòng nhập emoji hợp lệ', event.threadID, event.messageID);
-  }
-
-  try {
-    const generate1 = await generateEmojimix(emoji1, emoji2);
-		const generate2 = await generateEmojimix(emoji2, emoji1);
-
-		if (generate1)
-			readStream.push(generate1);
-		if (generate2)
-			readStream.push(generate2);
-  api.sendMessage({
-    body: `☑︎ · Mix thành công ${emoji1} và ${emoji2}`,
-    attachment: readStream
-   }, event.threadID, event.messageID)
-  } catch (err) {
-    api.sendMessage(`⌧ · Không thể mix ${emoji1} và ${emoji2}`, event.threadID, event.messageID)
-   }
-}
-
-async function generateEmojimix(emoji1, emoji2) {
-	try {
-		const { data: response } = await axios.get("https://goatbotserver.onrender.com/taoanhdep/emojimix", {
-			params: {
-				emoji1,
-				emoji2
-			},
-			responseType: "stream"
-		});
-		response.path = `emojimix${Date.now()}.png`;
-		return response;
-	}
-	catch (e) {
-		return null;
-	}
-}
+	 var callback = () => api.sendMessage({body:``,attachment: fs.createReadStream(__dirname + "/cache/biden.png")}, event.threadID, () => fs.unlinkSync(__dirname + "/cache/biden.png"),event.messageID);
+	 return request(encodeURI(`${APIURL}/api/maker/emojimix?emoji1=${emoji1}&emoji2=${emoji2}&apikey=SAKIBIN-FREE-SY6B4X`)).pipe(fs.createWriteStream(__dirname+'/cache/biden.png')).on('close',() => callback()); 
+} catch (err){
+return api.sendMessage("Can't mix "+emoji1+" and "+emoji2, event.threadID, event.messageID)
+}   
+}}

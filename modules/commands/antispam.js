@@ -1,96 +1,76 @@
-module.exports.config = {
-    hasPermssion: 1, 
-    credits: "Vtuan", // pls đừng thay cre edit tội mình b ơi:(
-    name: "antispam", 
-    commandCategory: "Quản Trị Viên",
-    usages: "set/on/off [count] [time]",
-    version: "1.0.0", 
+ const num = 3 //number of times spam gets banned -1, for example 5 times 6 times will get banned
+ const timee = 10 // During `timee` spam `num` times will be banned
+ module.exports.config = {
+    name: "antispam",
+    version: "1.0.0",
+    permission: 0,
+    credits: "sakibin",
+    description: "automatically ban spammer",
+    prefix: true,
+    premium: false,
+    category: "system",
+    usages: "none",
     cooldowns: 0,
-    description: 'Tự động kick người dùng khi spam trong nhóm',
 };
 
-const fs = require("fs-extra");
-let antiSpamStatus = {};
-let usersSpam = {};
-const path = "./modules/commands/cache/data/antispamStatus.json";
+module.exports.languages = {
+  "vi": {},
+  "en": {}
+}
 
-module.exports.handleEvent = async function({ api, event }) {
-    const { threadID, senderID } = event;
-    if (!fs.existsSync(path)) {
-        antiSpamStatus = {};
-        fs.writeFileSync(path, JSON.stringify(antiSpamStatus));
-    } else {
-        antiSpamStatus = JSON.parse(fs.readFileSync(path));
-    }
-    let settings = antiSpamStatus[event.threadID]; 
-    if (!settings || !settings.status) return;
-    if (!usersSpam[senderID]) {
-        usersSpam[senderID] = {
-            count: 0,
-            start: Date.now()
-        };
-    }
-    usersSpam[senderID].count++;
-    if (Date.now() - usersSpam[senderID].start > settings.spamTime) {
-        if (usersSpam[senderID].count > settings.spamCount && settings.status) {
-            api.removeUserFromGroup(senderID, threadID);
-            api.sendMessage({
-                body: `Đã tự động kick do spam`,
-                mentions: [{
-                    tag: `${senderID}`,
-                    id: senderID
-                }]
-            }, threadID);
-        }
-        usersSpam[senderID].count = 0;
-        usersSpam[senderID].start = Date.now();
-    }
+module.exports.run = async function ({api, event})  {
+  return api.sendMessage(`automatically ban users if spam ${num} times\ntime : ${timee}s`, event.threadID, event.messageID);
 };
-module.exports.run = async function ({event, api, args}) {
-    let infoThread = await api.getThreadInfo(event.threadID);
-    let adminIDs = infoThread.adminIDs.map(e => e.id);
-    var idBot = api.getCurrentUserID();
-    switch(args[0]) {
-        case "set":
-            if (!adminIDs.includes(idBot)) {
-                api.sendMessage("Bot không phải là quản trị viên trong nhóm nên không thể cài đặt cấu hình!", event.threadID);
-                return;
-            }
-            let newCount = parseInt(args[1]);
-            let newTime = parseInt(args[2]);
-            if (!newCount || !newTime) {
-                api.sendMessage("Vui lòng cung cấp cả số lần tin nhắn và thời gian hợp lệ (tính bằng mili giây)", event.threadID);
-                return;
-            }
-            antiSpamStatus[event.threadID] = {
-                spamCount: newCount,
-                spamTime: newTime,
-                status: false
-            };
-            fs.writeFileSync(path, JSON.stringify(antiSpamStatus));
-            api.sendMessage(`Done✓`, event.threadID);
-            break;
-        case "on":
-            if (!adminIDs.includes(idBot)) {
-                api.sendMessage("Bot không phải là quản trị viên trong nhóm nên không thể kích hoạt chế độ chống spam", event.threadID);
-                return;
-            }
-            if (!antiSpamStatus[event.threadID]) {
-                api.sendMessage("Vui lòng sử dụng 'antispam set [count] [time]", event.threadID);
-                return;
-            }
-            antiSpamStatus[event.threadID].status = true;
-            fs.writeFileSync(path, JSON.stringify(antiSpamStatus));
-            api.sendMessage('Đã bật chế độ chống spam!', event.threadID);
-            break;
-        case "off":
-            if (antiSpamStatus[event.threadID]) {
-                antiSpamStatus[event.threadID].status = false;
-                fs.writeFileSync(path, JSON.stringify(antiSpamStatus));
-                api.sendMessage('Đã tắt chế độ chống spam!', event.threadID);
-            }
-            break;
-        default:
-            api.sendMessage("Sử dụng antispam set/on/off [count] [time]", event.threadID);
+
+module.exports.handleEvent = async function ({ Users, Threads, api, event})  {
+  let { senderID, messageID, threadID } = event;
+  var datathread = (await Threads.getData(event.threadID)).threadInfo;
+  
+  if (!global.client.autoban) global.client.autoban = {};
+  
+  if (!global.client.autoban[senderID]) {
+    global.client.autoban[senderID] = {
+      timeStart: Date.now(),
+      number: 0
     }
+  };
+  
+  const threadSetting = global.data.threadData.get(threadID) || {};
+  const prefix = threadSetting.PREFIX || global.config.PREFIX;
+  if (!event.body || event.body.indexOf(prefix) != 0) return;
+  
+  if ((global.client.autoban[senderID].timeStart + (timee*1000)) <= Date.now()) {
+    global.client.autoban[senderID] = {
+      timeStart: Date.now(),
+      number: 0
+    }
+  }
+  else {
+    global.client.autoban[senderID].number++;
+    if (global.client.autoban[senderID].number >= num) {
+      var namethread = datathread.threadName;
+      const moment = require("moment-timezone");
+      const timeDate = moment.tz("Asia/Manila").format("DD/MM/YYYY HH:mm:ss");
+      let dataUser = await Users.getData(senderID) || {};
+      let data = dataUser.data || {};
+      if (data && data.banned == true) return;
+      data.banned = true;
+      data.reason = `spam bot ${num} times/${timee}s` || null;
+      data.dateAdded = timeDate;
+      await Users.setData(senderID, { data });
+      global.data.userBanned.set(senderID, { reason: data.reason, dateAdded: data.dateAdded });
+      global.client.autoban[senderID] = {
+        timeStart: Date.now(),
+        number: 0
+      };
+      api.sendMessage(senderID + " \nname : " + dataUser.name + `\nreason : spam bot ${num} times\nautomatically unban after ${timee} seconds\n\nreport sent to admins`, threadID,
+    () => {
+    var idad = global.config.ADMINBOT;
+    for(let ad of idad) {
+        api.sendMessage(`spam ban notification\n\nspam offenders ${num}/${timee}s\nname: ${dataUser.name} \nuser id: ${senderID}\ngroup ID: ${threadID} \ngroup name: ${namethread} \ntime: ${timeDate}`, 
+          ad);
+    }
+    })
+    }
+  }
 };

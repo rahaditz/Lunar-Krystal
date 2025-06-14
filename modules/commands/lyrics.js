@@ -1,80 +1,53 @@
-const axios = require('axios');
+const axios = require("axios");
 
-module.exports.config = {
+const baseApiUrl = async () => {
+  const base = await axios.get(
+    `https://raw.githubusercontent.com/Blankid018/D1PT0/main/baseApiUrl.json`,
+  );
+  return base.data.api;
+};
+
+(module.exports = {
+  config: {
     name: "lyrics",
-    version: "1.0.0",
-    hasPermssion: 0,
-    credits: "",
-    description: "Tìm lời bài hát từ API",
-    commandCategory: "Tìm kiếm",
-    usages: "/lyrics [tên bài hát]",
-    cooldowns: 5
-};
+    version: "1.0",
+    credits: "Nazrul",
+    cooldowns: 5,
+    hasPermission: 0,
+    premium: false,  
+    prefix: true,
+   // premium: false,  prefix: true,
+    description: "Get song lyrics with their Images",
+    category: "utility",
+   // category: " song",
+    usages: "lyrics"
+  },
 
-module.exports.run = async function({ api, event, args }) {
-    const { threadID, messageID, senderID } = event;
-    const songName = args.join(" ");
-
-    if (!songName) {
-        return api.sendMessage("Vui lòng nhập tên bài hát.", threadID, messageID);
-    }
-
+  run: async ({ api, event, args }) => {
     try {
-        const response = await axios.get(`https://deku-rest-api.gleeze.com/search/lyrics?q=${encodeURIComponent(songName)}`);
-        const result = response.data.result;
+      const Songs = args.join(' ');
+      if (!Songs) {
+        return api.sendMessage("Please provide a song name!", event.threadID, event.messageID);
+      }
 
-        if (!result) {
-            return api.sendMessage("Không tìm thấy bài hát, vui lòng thử lại.", threadID, messageID);
-        }
+      const res = await axios.get(`${await baseApiUrl()}/lyrics2?songName=${encodeURIComponent(Songs)}`);
+      const data = res.data;
+      if (!data.title || !data.artist || !data.lyrics) {
+        return api.sendMessage("An error occurred while fetching lyrics!", event.threadID, event.messageID);
+      }
 
-        const { title, artist, image } = result;
-        api.sendMessage({
-            body: `🎵 Bài hát: ${title}\n👤 Nghệ sĩ: ${artist}\nĐây có phải bài hát bạn muốn tìm không? (Reply Y để xác nhận, N để hủy bỏ)`,
-            attachment: [await getImageStream(image)]
-        }, threadID, (error, info) => {
-            if (error) return api.sendMessage("Đã có lỗi xảy ra.", threadID, messageID);
-            global.client.handleReply.push({
-                name: this.config.name,
-                author: senderID,
-                title,
-                artist,
-                messageID: info.messageID,
-                type: "confirm"
-            });
-        }, messageID);
+      const songMessage = { 
+        body: `❏♡𝐒𝐨𝐧𝐠 𝐓𝐢𝐭𝐥𝐞: ${data.title}\n\n❏♡𝐀𝐫𝐭𝐢𝐬𝐭: ${data.artist}\n\n❏♡𝐒𝐨𝐧𝐠 𝐋𝐲𝐫𝐢𝐜𝐬:\n\n${data.lyrics}` 
+      };
+
+      if (data.image) {
+        const stream = await axios.get(data.image, { responseType: 'stream' });
+        songMessage.attachment = stream.data;
+      }
+
+      return api.sendMessage(songMessage, event.threadID, event.messageID);
     } catch (error) {
-        console.error(error);
-        return api.sendMessage("Đã có lỗi xảy ra khi tìm kiếm bài hát.", threadID, messageID);
+    api.sendMessage("error: " + error.message, event.threadID, event.messageID);
     }
-};
-
-module.exports.handleReply = async function({ api, event, handleReply }) {
-    const { threadID, messageID, body, senderID } = event;
-
-    if (handleReply.author !== senderID) return;
-
-    if (handleReply.type === "confirm") {
-        if (body.toLowerCase() === 'y') {
-            try {
-                const response = await axios.get(`https://deku-rest-api.gleeze.com/search/lyrics?q=${encodeURIComponent(handleReply.title)}`);
-                const lyrics = response.data.result.lyrics;
-
-                api.sendMessage(`🎶 Lời bài hát "${handleReply.title}" - ${handleReply.artist}:\n\n${lyrics}`, threadID, messageID);
-            } catch (error) {
-                return api.sendMessage("Đã có lỗi xảy ra khi lấy lời bài hát.", threadID, messageID);
-            }
-        } else if (body.toLowerCase() === 'n') {
-            api.sendMessage("Đã hủy bỏ yêu cầu.", threadID, messageID);
-        } else {
-            api.sendMessage("Vui lòng reply Y để xác nhận, hoặc N để hủy bỏ.", threadID, messageID);
-        }
-    }
-};
-
-async function getImageStream(url) {
-    const response = await axios({
-        url,
-        responseType: 'stream'
-    });
-    return response.data;
-}
+  }
+});

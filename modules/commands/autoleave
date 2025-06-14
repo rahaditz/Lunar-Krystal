@@ -1,0 +1,42 @@
+const fs = require("fs");
+const path = require("path");
+
+module.exports.config = {
+  premium: false,  
+  prefix: true,
+  name: "autoleave",
+  version: "1.0.0",
+  permission: 3,
+  credits: "Sakibin",
+  description: "Automatically leaves the group if someone types anything",
+ category: "Admin",
+  usages: "No usage, runs automatically",
+  cooldowns: 5,
+};
+
+// Load approved thread IDs from approvedlists.json
+const approvedListPath = path.join(__dirname, "../../sakibin/botdata/approvedlists.json");
+let allowedThread = [];
+
+try {
+  const approvedData = JSON.parse(fs.readFileSync(approvedListPath, "utf8"));
+  if (Array.isArray(approvedData.APPROVED)) {
+    allowedThread = approvedData.APPROVED.filter(id => id.trim() !== "");
+  }
+} catch (error) {
+  console.error("Error loading approved thread list:", error);
+}
+
+module.exports.handleEvent = async ({ api, event }) => {
+  const { threadID } = event;
+
+  // Prevent the bot from leaving allowed groups
+  if (allowedThread.includes(threadID)) return;
+
+  // Bot leaves the group immediately
+  return api.removeUserFromGroup(api.getCurrentUserID(), threadID);
+};
+
+module.exports.run = async () => {
+  // This function doesn't need to do anything since the module auto-triggers via handleEvent.
+};

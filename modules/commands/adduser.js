@@ -1,37 +1,51 @@
 module.exports.config = {
-    name: "adduser",
-    version: "1.0.0",
-    hasPermssion: 1,
-    credits: "D-Jukie",
-    description: "Thêm người dùng vào nhóm bằng link hoặc uid",
-    commandCategory: "Quản Trị Viên",
-    usages: "[args]",
-    cooldowns: 5
+	name: "adduser",
+	version: "1.0.1",
+	
+    permission: 0,
+	credits: "Yan Maglinte",
+	description: "Add user to group by id",
+    premium: true,
+  prefix: true,
+	category: "group",
+	usages: "[args]",
+	cooldowns: 5
 };
-module.exports.run = async function ({ api, event, args, Threads, Users }) {
-const { threadID, messageID } = event;
-const axios = require('axios')
-const link = args.join(" ")
-if(!args[0]) return api.sendMessage({body:`Cách xử dụng:\n+adduser <link facebook>\n+adduser <uid>`
-},event.threadID, event.messageID)
-var { participantIDs, approvalMode, adminIDs } = await api.getThreadInfo(threadID);
-if(link.indexOf(".com/")!==-1) {
-    const res = await api.getUID(args[0] || event.messageReply.body);
-    var uidUser = res
-    api.addUserToGroup(uidUser, threadID, (err) => {
-    if (participantIDs.includes(uidUser)) return api.sendMessage('Trong nhóm đã có thành viên này rồi', threadID, messageID);
-    if (err) return api.sendMessage(`Không thể thêm vào nhóm`, threadID, messageID);
-    else if (approvalMode && !adminIDs.some(item => item.id == api.getCurrentUserID())) return api.sendMessage(`Thành viên đã được thêm vào danh sách phê duyệt`, threadID, messageID);
-    else return api.sendMessage(`Thêm thành viên vào nhóm thành công`, threadID, messageID);
-    });
-    }
-  else { 
-    var uidUser = args[0] 
-    api.addUserToGroup(uidUser, threadID, (err) => {
-    if (participantIDs.includes(uidUser)) return api.sendMessage(`Trong nhóm đã có thành viên này rồi`, threadID, messageID);
-    if (err) return api.sendMessage(`Không thể thêm vào nhóm`, threadID, messageID);
-    else if (approvalMode && !adminIDs.some(item => item.id == api.getCurrentUserID())) return api.sendMessage(`Thành viên đã được thêm vào danh sách phê duyệt`, threadID, messageID);
-    else return api.sendMessage(`Thêm thành viên vào nhóm thành công`, threadID, messageID);
-    });
-  }
+
+module.exports.run = async function ({ api, event, args }) {
+	const { threadID, messageID } = event;
+	const botID = api.getCurrentUserID();
+	const out = msg => api.sendMessage(msg, threadID, messageID);
+	var { participantIDs, approvalMode, adminIDs } = await api.getThreadInfo(threadID);
+	var participantIDs = participantIDs.map(e => parseInt(e));
+	if (!args[0]) return out("Please enter an id/link profile user to add.");
+	if (!isNaN(args[0])) return adduser(args[0], undefined);
+	else {
+		try {
+			var [id, name, fail] = await getUID(args[0], api);
+			if (fail == true && id != null) return out(id);
+			else if (fail == true && id == null) return out("User ID not found.")
+			else {
+				await adduser(id, name || "Facebook users");
+			}
+		} catch (e) {
+			return out(`${e.name}: ${e.message}.`);
+		}
+	}
+
+	async function adduser(id, name) {
+		id = parseInt(id);
+		if (participantIDs.includes(id)) return out(`${name ? name : "Member"} is already in the group.`);
+		else {
+			var admins = adminIDs.map(e => parseInt(e.id));
+			try {
+				await api.addUserToGroup(id, threadID);
+			}
+			catch {
+				return out(`Can't add ${name ? name : "user"} in group.`);
+			}
+			if (approvalMode === true && !admins.includes(botID)) return out(`Added ${name ? name : "member"} to the approved list !`);
+			else return out(`Added ${name ? name : "member"} to the group !`)
+		}
+	}
 }

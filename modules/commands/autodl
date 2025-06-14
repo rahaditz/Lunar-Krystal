@@ -1,0 +1,77 @@
+const axios = require("axios");
+const fs = require("fs-extra");
+const tinyurl = require("tinyurl");
+
+const baseApiUrl = async () => {
+  const base = await axios.get("https://raw.githubusercontent.com/Mostakim0978/D1PT0/refs/heads/main/baseApiUrl.json");
+  return base.data.api;
+};
+
+module.exports.config = {
+  name: "autodl",
+  version: "2.0",
+  author: "Dipto",
+  credits: "Dipto",
+  description: "Auto download video from TikTok, Facebook, Instagram, YouTube, and more",
+  category: "media",
+  prefix: true,
+  dependencies: {
+    "tinyurl": "",
+    "fs-extra": ""
+  }
+};
+
+module.exports.handleEvent = async function ({ api, event }) {
+  const body = event.body || "";
+
+  const supported = [
+    "https://vt.tiktok.com",
+    "https://vm.tiktok.com",
+    "https://www.tiktok.com/",
+    "https://www.facebook.com",
+    "https://fb.watch",
+    "https://www.instagram.com/",
+    "https://www.instagram.com/p/",
+    "https://youtu.be/",
+    "https://youtube.com/",
+    "https://x.com/",
+    "https://twitter.com/",
+    "https://pin.it/"
+  ];
+
+  if (!supported.some(url => body.startsWith(url))) return;
+
+  try {
+    api.setMessageReaction("⌛", event.messageID, () => {}, true);
+    const waitMsg = await api.sendMessage("Downloading source from link...", event.threadID);
+
+    const apiRes = await axios.get(`${await baseApiUrl()}/alldl?url=${encodeURIComponent(body)}`);
+    const result = apiRes.data;
+    const fileUrl = result.result;
+    const fileType = fileUrl.includes(".jpg") || fileUrl.includes(".png") || fileUrl.includes(".jpeg") ? "image" : "video";
+    const extension = fileUrl.split('.').pop().split("?")[0];
+    const filePath = `${__dirname}/download/autodl.${extension}`;
+
+    const fileBuffer = (await axios.get(fileUrl, { responseType: "arraybuffer" })).data;
+    fs.writeFileSync(filePath, Buffer.from(fileBuffer, "binary"));
+
+    const shortUrl = await tinyurl.shorten(fileUrl);
+
+    api.setMessageReaction("✅", event.messageID, () => {}, true);
+    api.unsendMessage(waitMsg.messageID);
+
+    await api.sendMessage({
+      body: `${result.cp || "✅ Here's your media"}\n🔗 Link: ${shortUrl}`,
+      attachment: fs.createReadStream(filePath)
+    }, event.threadID, () => fs.unlinkSync(filePath), event.messageID);
+
+  } catch (err) {
+    console.log("AutoDL Error:", err);
+    api.setMessageReaction("❌", event.messageID, () => {}, true);
+    api.sendMessage(`❌ Error: ${err.message}`, event.threadID, event.messageID);
+  }
+};
+
+module.exports.run = async function () {
+  // No need for run command
+};
