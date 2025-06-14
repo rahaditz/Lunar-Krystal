@@ -1,11 +1,11 @@
 {
-    "language": "vi",
+    "language": "en",
     "DeveloperMode": false,
     "autoCreateDB": true,
     "MAINTENANCE_MODE": false,
     "iconUnsend": {
         "status": true,
-        "icon": "❤"
+        "icon": "😡"
     },
     "notiGroup": false,
     "NOTIFICATION": true,
@@ -14,15 +14,15 @@
     "eventDisabled": [],
     "autoClean": true,
     "ACCESSTOKEN": "",
-    "BOTNAME": "Lương Trường Khôi",
-    "AMDIN_NAME": "Có lỗi báo mình fix qua link bên dưới:",
-    "FACEBOOK_ADMIN": "https://www.facebook.com/100018277053087",
-    "PREFIX": "/",
+    "BOTNAME": "✞☬𝑺𝒉𝒊𝒛𝒖𝒌𝒂 ☬✞",
+    "AMDIN_NAME": "💤📿𝗥𝗮𝗵𝗮𝗱 📿💤",
+    "FACEBOOK_ADMIN": "https://www.facebook.com61577087531671",
+    "PREFIX": "-",
     "ADMINBOT": [
-        "100018277053087"
+        "61577087531671"
     ],
     "NDH": [
-        "100018277053087"
+        "61577087531671"
     ],
     "DATABASE": {
         "sqlite": {
