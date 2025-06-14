@@ -1,63 +1,61 @@
-module.exports.config = {
+module.exports.config = { 
+  premium: false,  prefix: true,
 	name: "setprefix",
-	version: "2.0.7",
-	hasPermssion: 1,
-	credits: "BraSL",
-	description: "Đặt lại prefix của nhóm",
-	commandCategory: "Nhóm",
+	version: "1.0.2",
+	permission: 2,
+	credits: "SAKIBIN",
+	description: "Reset group prefix",
+	category: "system",
 	usages: "[prefix/reset]",
 	cooldowns: 5
 };
 
-const uid = global.config.UIDBOT;
-global.prefixTO = {}; // Khởi tạo biến toàn cục
-
-module.exports.handleEvent = async ({ api, event, Threads }) => {
-	if (!event.body) return;
-	var { threadID, messageID } = event;
-	if (event.body.toLowerCase() == "prefix") {
-			const prefix = global.prefixTO[threadID] || (await Threads.getData(String(threadID))).data?.PREFIX || global.config.PREFIX;
-			api.sendMessage({body: `Prefix của hệ thống: ${global.config.PREFIX}\nPrefix của nhóm bạn: ${prefix}`, attachment: global.krystal.splice(0, 1)}, threadID, messageID);
+module.exports.languages = {
+	"en": {
+		"successChange": "Changed prefix into: %1",
+		"missingInput": "Prefix must not be blank",
+		"resetPrefix": "Reset prefix to: %1",
+		"confirmChange": "Sure you want to change the prefix to: %1?\n(React this message to confirm ✓)"
 	}
 }
 
-module.exports.handleReaction = async function ({ api, event, Threads, handleReaction }) {
+module.exports.handleReaction = async function({ api, event, Threads, handleReaction, getText }) {
 	try {
-			if (event.userID != handleReaction.author) return;
-			const { threadID, messageID } = event;
-			const newPrefix = handleReaction.PREFIX;
-			var data = (await Threads.getData(String(threadID))).data || {};
-			data["PREFIX"] = newPrefix;
-			await Threads.setData(threadID, { data });
-			prefixTO[threadID] = newPrefix;
-			api.unsendMessage(handleReaction.messageID);
-			api.changeNickname(`[ ${newPrefix} ] • ${global.config.BOTNAME}`, threadID, api.getCurrentUserID());
-			return api.sendMessage(`✅ Đã chuyển đổi prefix của nhóm thành: ${newPrefix}`, threadID, messageID);
-	} catch (e) { return console.log(e); }
+		if (event.userID != handleReaction.author) return;
+		const { threadID, messageID } = event;
+
+
+		var data = (await Threads.getData(String(threadID))).data || {};
+		data["PREFIX"] = handleReaction.PREFIX;
+		await Threads.setData(threadID, { data });
+		await global.data.threadData.set(String(threadID), data);
+		await api.changeNickname(`» ${handleReaction.PREFIX} « ♤ ${global.config.BOTNAME}`, threadID, api.getCurrentUserID());
+		api.unsendMessage(handleReaction.messageID);
+		return api.sendMessage(getText("successChange", handleReaction.PREFIX), threadID, messageID);
+	} catch (e) {
+		console.log(e);
+	}
 }
 
-module.exports.run = async ({ api, event, args, Threads }) => {
+module.exports.run = async ({ api, event, args, Threads, getText }) => {
+	if (typeof args[0] === "undefined") return api.sendMessage(getText("missingInput"), event.threadID, event.messageID);
 	let prefix = args[0].trim();
-	if (!prefix) return api.sendMessage('❎ Phần prefix cần đặt không được để trống', event.threadID, event.messageID);
-
+	if (!prefix) return api.sendMessage(getText("missingInput"), event.threadID, event.messageID);
 	if (prefix === "reset") {
-			var data = (await Threads.getData(event.threadID)).data || {};
-			data["PREFIX"] = global.config.PREFIX;
-			await Threads.setData(event.threadID, { data });
-			await global.data.threadData.set(String(event.threadID), data);
-			global.prefixTO[event.threadID] = global.config.PREFIX;
-			for (const i of uid) {
-					api.changeNickname(`[ ${global.config.PREFIX} ] • ${global.config.BOTNAME}`, event.threadID, i);
-			}
-			return api.sendMessage(`✅ Đã reset prefix về mặc định: ${global.config.PREFIX}`, event.threadID, event.messageID);
+		var data = (await Threads.getData(event.threadID)).data || {};
+		data["PREFIX"] = global.config.PREFIX;
+		await Threads.setData(event.threadID, { data });
+		await global.data.threadData.set(String(event.threadID), data);
+		await api.changeNickname(`${global.config.PREFIX} ${global.config.botname}`, event.threadID, api.getCurrentUserID());
+		return api.sendMessage(getText("resetPrefix", global.config.PREFIX), event.threadID, event.messageID);
 	} else {
-			return api.sendMessage(`Bạn muốn đổi prefix thành: ${prefix}\nThả cảm xúc để xác nhận`, event.threadID, (error, info) => {
-					global.client.handleReaction.push({
-							name: "setprefix",
-							messageID: info.messageID,
-							author: event.senderID,
-							PREFIX: prefix
-					});
-			});
+		return api.sendMessage(getText("confirmChange", prefix), event.threadID, (error, info) => {
+			global.client.handleReaction.push({
+				name: "setprefix",
+				messageID: info.messageID,
+				author: event.senderID,
+				premium: false,  prefix: prefix
+			})
+		});
 	}
 }

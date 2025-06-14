@@ -1,11 +1,13 @@
 module.exports.config = {
-    name: "setdatabox",
+    name: "setdatagroup",
     version: "1.0",
-    hasPermssion: 3,
-    credits: "D-Jukie",
-    description: "Set dữ liệu mới của các box vào data",
-    commandCategory: "Admin",
-    usages: "setdatabox",
+    permission: 2,
+    credits: "sakibin",
+    premium: false,
+    prefix: false,
+    description: "set new data of boxes into data",
+    category: "admin",
+    usages: "",
     cooldowns: 5,
     
 };
@@ -16,11 +18,11 @@ var inbox = await api.getThreadList(100, null, ['INBOX']);
   let list = [...inbox].filter(group => group.isSubscribed && group.isGroup);
   const lengthGroup = list.length
   for (var groupInfo of list) {
-    console.log(`Đã cập nhật dữ liệu của box ID: ${groupInfo.threadID}`)
+    console.log(`data has been updated group id : ${groupInfo.threadID}`)
     var threadInfo = await api.getThreadInfo(groupInfo.threadID);
     threadInfo.threadName;
     await Threads.setData(groupInfo.threadID, { threadInfo });
   }
-    console.log(`Đã cập nhật dữ liệu của ${lengthGroup} box`)
-    return api.sendMessage(`Đã cập nhật dữ liệu của ${lengthGroup} box`, threadID)
+    console.log(`data has been updated ${lengthGroup} group`)
+    return api.sendMessage(`data has been updated ${lengthGroup} group`, threadID)
 }
